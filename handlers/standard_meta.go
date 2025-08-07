@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"golang.org/x/net/html"
+	"net/url"
 	"strings"
 )
 
@@ -88,7 +89,7 @@ func (p *StandardLinkPreview) parseMetaContent(node *html.Node) string {
 
 func (p *StandardLinkPreview) parseMetaProperties(nodeType string, node *html.Node) {
 	nodeType = strings.ToLower(nodeType)
-	if ! strings.HasPrefix(nodeType, "og:") {
+	if !strings.HasPrefix(nodeType, "og:") {
 		return
 	}
 
@@ -104,8 +105,22 @@ func (p *StandardLinkPreview) parseMetaProperties(nodeType string, node *html.No
 	case "description":
 		p.Description = content
 	case "image":
-		p.ImageURL = content
+		p.ImageURL = p.parseFullUrl(content)
 	case "title":
 		p.Title = content
 	}
+}
+
+func (p *StandardLinkPreview) parseFullUrl(link string) string {
+	if strings.Contains(link, "http://") || strings.Contains(link, "https://") {
+		return link
+	}
+
+	parsedURL, _ := url.Parse(p.FinalLink)
+	joinedURL := url.URL{
+		Scheme: parsedURL.Scheme,
+		Host:   parsedURL.Host,
+		Path:   link,
+	}
+	return joinedURL.String()
 }

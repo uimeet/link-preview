@@ -1,9 +1,12 @@
 package handlers
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"github.com/PuerkitoBio/goquery"
 	"golang.org/x/net/html"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -54,8 +57,10 @@ type LinkPreviewContext struct {
 	ImageURL    string `json:"image"`
 	Link        string `json:"website"`
 
-	Client *http.Request     `json:"-"`
-	Parsed *goquery.Document `json:"-"`
+	ImageBytes []byte            `json:"-"`
+	FinalLink  string            `json:"-"`
+	Client     *http.Request     `json:"-"`
+	Parsed     *goquery.Document `json:"-"`
 }
 
 func (p *LinkPreviewContext) PreviewContext() *LinkPreviewContext {
@@ -74,6 +79,7 @@ func (p *LinkPreviewContext) request() error {
 	}
 	defer res.Body.Close()
 
+	p.FinalLink = res.Request.URL.String()
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if nil != err {
 		return err
@@ -118,4 +124,28 @@ func (p *LinkPreviewContext) parseFavicon(node *html.Node) {
 	}
 }
 
+func (p *LinkPreviewContext) GetImageBytes() ([]byte, error) {
+	if p.ImageBytes != nil {
+		fmt.Println("从缓存中获取 ImageBytes")
+		return p.ImageBytes, nil
+	}
+	if p.ImageURL == "" {
+		return nil, errors.New("image not found")
+	}
 
+	resp, err := http.Get(p.ImageURL)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// 使用 bytes.Buffer 流式读取
+	var buf bytes.Buffer
+	// 按块复制数据到缓冲区
+	_, err = io.Copy(&buf, resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	p.ImageBytes = buf.Bytes()
+	return p.ImageBytes, nil
+}
