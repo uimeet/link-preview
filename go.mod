@@ -1,4 +1,4 @@
-module github.com/uimeet/link-preview
+module github.com/Junzki/link-preview
 
 go 1.12
 
