@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"golang.org/x/net/html"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
+
+	"github.com/PuerkitoBio/goquery"
+	"go.mau.fi/whatsmeow"
+	"golang.org/x/net/html"
 )
 
 const (
@@ -52,15 +54,17 @@ type HTMLMetaAttr struct {
 
 type LinkPreviewContext struct {
 	TargetType  int    `json:"-"`
+	Language    string `json:"-"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
 	ImageURL    string `json:"image"`
 	Link        string `json:"website"`
 
-	ImageBytes []byte            `json:"-"`
-	FinalLink  string            `json:"-"`
-	Client     *http.Request     `json:"-"`
-	Parsed     *goquery.Document `json:"-"`
+	ImageBytes     []byte                    `json:"-"`
+	FinalLink      string                    `json:"-"`
+	Client         *http.Request             `json:"-"`
+	Parsed         *goquery.Document         `json:"-"`
+	UploadResponse *whatsmeow.UploadResponse `json:"-"`
 }
 
 func (p *LinkPreviewContext) PreviewContext() *LinkPreviewContext {
@@ -68,7 +72,13 @@ func (p *LinkPreviewContext) PreviewContext() *LinkPreviewContext {
 }
 
 func (p *LinkPreviewContext) initClient() {
+	if p.Language == "" {
+		p.Language = "en-US"
+	}
 	client, _ := http.NewRequest("GET", p.Link, nil)
+	client.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36")
+	client.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	client.Header.Set("Accept-Language", fmt.Sprintf("%s,%s;q=0.9", p.Language, strings.Split(p.Language, "-")[0]))
 	p.Client = client
 }
 
